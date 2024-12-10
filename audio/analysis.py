@@ -2,6 +2,8 @@ import librosa
 import numpy as np
 from typing import Any
 import soundfile as sf
+import matplotlib.pyplot as plt
+
 class AudioAnalyser:
     def __init__(self, song_path):
         self.song_path = song_path
@@ -17,12 +19,61 @@ class AudioAnalyser:
             return librosa.beat.beat_track(onset_envelope=onset, sr=self.sr)
         else:
             return librosa.beat.beat_track(y=self.y, sr=self.sr)
+        
+    def Show_onset_beats(self):
+        tempo, beat_frames = self.Get_Beattrack(False)
+        beat_times = librosa.frames_to_time(beat_frames, sr=self.sr)
+        onset_env = librosa.onset.onset_strength(y=self.y, sr=self.sr)
+        times = librosa.times_like(onset_env, sr=self.sr)
+        #compute mean
+        mean = np.mean(onset_env)
+        beat_array = np.copy(onset_env)
+        for index in range(onset_env.size):
+            if onset_env[index] < mean:
+                beat_array[index] = 0
+
+        plt.plot(times, onset_env, label='Onset Strength')
+        #plt.vlines(beat_times, 0, np.max(onset_env), color='r', alpha=0.75, linestyle='--', label='Beats')
+        plt.plot(times, beat_array, label='Beats', color='r')
+        plt.legend(loc='upper right')
+        plt.xlabel('Time (s)')
+        plt.title('Onset Strength and Beat Locations')
+        plt.show()
+
+    def Show_fourier(self):
+        tempo_features = librosa.feature.fourier_tempogram(y=self.y, sr=self.sr)
+        librosa.display.specshow(tempo_features, sr=self.sr, x_axis='time', y_axis='tempo', cmap='cool')
+        plt.title('Fourier Tempogram')
+        plt.colorbar()
+        plt.show()
 
 Analyser = AudioAnalyser('Maps/785731 S3RL - Catchit (Radio Edit)/audio.mp3')
 
-tempo, beat_frames = Analyser.Get_Beattrack()
-beat_times = librosa.frames_to_time(beat_frames, sr=Analyser.sr)
+Analyser.Show_onset_beats()
+#Analyser.Show_fourier()
+
+#adding beats whenever onset > average
+hit_sound, hit_sr = librosa.load('Maps/785731 S3RL - Catchit (Radio Edit)/soft-hitclap.wav')
+
+hit_duration = len(hit_sound) / hit_sr
+
 onset_env = librosa.onset.onset_strength(y=Analyser.y, sr=Analyser.sr)
+onset_avg = np.mean(onset_env)
+
+frames_above_avg = np.where(onset_env > onset_avg)[0]
+times_above_avg = librosa.frames_to_time(frames_above_avg, sr=Analyser.sr)
+
+sample_indices = (times_above_avg * Analyser.sr).astype(int)
+
+output_audio = Analyser.y.copy()
+
+for idx in sample_indices:
+    end_idx = idx + len(hit_sound)
+    if end_idx <= len(output_audio):
+        output_audio[idx:end_idx] += hit_sound
+output_audio = np.clip(output_audio, -1.0, 1.0)
+
+sf.write('test.wav', output_audio, Analyser.sr)
 
 # _, beats = Analyser.Get_Beattrack(False)
 
