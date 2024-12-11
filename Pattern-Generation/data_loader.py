@@ -77,8 +77,9 @@ class HitObject():
             return NullValue
 
 class BeatMap:
-    def __init__(self, BeatMap_Dir:str) ->None:
+    def __init__(self, BeatMap_Dir:str, Filter:list[HitObject_Type]=[]) ->None:
         self.BMDir = BeatMap_Dir
+        self.Filter = Filter
         self.HitObjects:dict[str, list[HitObject]] = self.__getHitObjects__()
         
 
@@ -102,6 +103,8 @@ class BeatMap:
                     HODic[difficulty] = [HitObject(is_empty=True)]
                     continue
                 HODic[difficulty] = [HitObject.from_str(lines[idx]) for idx in range(HO_idx, len(lines))]
+                if len(self.Filter) > 0:
+                    HODic[difficulty] = [ho for ho in HODic[difficulty] if ho.type_name in self.Filter]
 
         return HODic
 
@@ -133,6 +136,6 @@ class BeatMap:
 #     if dif:
 #         print(dif.group())
 
-bm = BeatMap("Maps/839864 S3RL - Catchit (Radio Edit)")
+bm = BeatMap("Maps/839864 S3RL - Catchit (Radio Edit)", Filter=[HitObject_Type.Hit_Circle])
 for ho in bm.HitObjects:
     print(f"{ho} object count: {len(bm.HitObjects[ho])}")
