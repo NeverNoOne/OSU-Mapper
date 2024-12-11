@@ -77,10 +77,21 @@ class HitObject():
             return NullValue
 
 class BeatMap:
+    '''
+    Represents a BeatMap Object containing all Information provided by the files
+    
+    Parameters
+        BeatMap_Dir -> the relative path to the BeatMap Directory
+    '''
     def __init__(self, BeatMap_Dir:str, Filter:list[HitObject_Type]=[]) ->None:
         self.BMDir = BeatMap_Dir
+        '''relative BeatMap Directory'''
         self.Filter = Filter
+        '''Filter option for specific HitObjects'''
+        self.Audio_Path = pathlib.Path(BeatMap_Dir).joinpath("audio.mp3") if pathlib.Path(BeatMap_Dir).joinpath("audio.mp3").exists() and pathlib.Path(BeatMap_Dir).joinpath("audio.mp3").is_file() else pathlib.Path()
+        '''Path of the Audio File | Beatmap Path if it wasn't found'''
         self.HitObjects:dict[str, list[HitObject]] = self.__getHitObjects__()
+        '''HitObjects mapped to the difficulty'''
         
 
     def __getHitObjects__(self) -> dict[str, list[HitObject]]:
@@ -139,3 +150,4 @@ class BeatMap:
 bm = BeatMap("Maps/839864 S3RL - Catchit (Radio Edit)", Filter=[HitObject_Type.Hit_Circle])
 for ho in bm.HitObjects:
     print(f"{ho} object count: {len(bm.HitObjects[ho])}")
+print(f"Audio File: {bm.Audio_Path.name}")
