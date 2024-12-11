@@ -2,24 +2,29 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from enum import Enum
+import pathlib
+import re
 
 class BeatMapDataSet(Dataset):
     def __init__(self) -> None:
         super().__init__()
 
 class HitObject_Type(Enum):
-    Hit_Circle = 0
-    Slider = 1
-    New_Combo = 2
-    Spinner = 3
-    Combo_Skips4 = 4
-    Combo_Skips5 = 5
-    Combo_Skips6 = 6
-    Hold_Note = 7
-    Unknown = -1
+    Hit_Circle = 1
+    Slider = 2
+    Spinner = 8
+    unknown = -1
+
+class color_flag_enum(Enum):
+    none = 0
+    new_combo = 4
+    one_skip = 16
+    two_skip = 32
+    three_skip = 64
+    unknown = -1
 
 class HitObject():
-    def __init__(self, x, y, time, type, hitsound,  objectParams, hitSample) -> None:
+    def __init__(self, x="", y="", time="", type="", hitsound="",  objectParams="", hitSample="", is_empty=False) -> None:
         self.x = x
         self.y = y
         self.time = time
@@ -27,10 +32,27 @@ class HitObject():
         self.hitsound = hitsound
         self.objectParams = objectParams
         self.hitSample = hitSample
-        self.type_name = self.__gettypename__()
+        flag, type_name = self.__gettypename__()
+        self.type_name = type_name
+        self.color_flag = flag
+        self.is_empty:bool = is_empty
 
-    def __gettypename__(self) -> HitObject_Type:
-        return HitObject_Type(int(self.type))
+    def __gettypename__(self) -> tuple[color_flag_enum, HitObject_Type]:
+        itype = int(self.type)
+        flag = color_flag_enum.unknown
+        t = HitObject_Type.unknown
+        flags = [4,16,32,64]
+        for f in flags:
+            if itype - f > 0:
+                flag = color_flag_enum(f)
+                t = HitObject_Type(itype - f)
+                break
+        if flag == color_flag_enum.unknown and t == HitObject_Type.unknown:
+            flag = color_flag_enum.none
+            t = HitObject_Type(itype)
+        return flag, t
+
+
     #TODO parser currently not completed
     @classmethod
     def from_str(cls, str:str):
@@ -42,35 +64,75 @@ class HitObject():
             type=cls.__safe_get__(list=splitted, idx=3, NullValue="-1"),
             hitsound=cls.__safe_get__(list=splitted, idx=4),
             objectParams=cls.__safe_get__(list=splitted, idx=5),
-            hitSample=cls.__safe_get__(list=splitted, idx=6)
+            hitSample=cls.__safe_get__(list=splitted, idx=6),
+            is_empty=False
         )
     
     @classmethod
-    def __safe_get__(cls, list:list, idx:int, NullValue=""):
+    def __safe_get__(cls, list:list[str], idx:int, NullValue=""):
         if len(list) >= idx +1:
+            list[idx]
             return list[idx]
         else:
             return NullValue
+
+class BeatMap:
+    def __init__(self, BeatMap_Dir:str) ->None:
+        self.BMDir = BeatMap_Dir
+        self.HitObjects:dict[str, list[HitObject]] = self.__getHitObjects__()
         
 
-def str_to_HitObject(str:str):
-    tmp = str.split(',')
+    def __getHitObjects__(self) -> dict[str, list[HitObject]]:
+        HODic:dict[str, list[HitObject]] = {}
+        HODic.clear()
+        for child in pathlib.Path(self.BMDir).glob('*.osu'):
+            #extract difficulty name as key in dict
+            difficulty = re.search('\\[[^\\]]*\\]', child.name)
+            if difficulty:
+                difficulty = difficulty.group()
+            else:
+                difficulty = "not found"
+            
+            #retrieve hitobjects
+            with child.open('r') as f:
+                lines = f.readlines()
+                try:
+                    HO_idx = lines.index("[HitObjects]\n") + 1
+                except ValueError:
+                    HODic[difficulty] = [HitObject(is_empty=True)]
+                    continue
+                HODic[difficulty] = [HitObject.from_str(lines[idx]) for idx in range(HO_idx, len(lines))]
 
-lines = [""]
-with open("Maps/839864 S3RL - Catchit (Radio Edit)/S3RL - Catchit (Radio Edit) (Rolniczy) [Ex].osu", 'r') as f:
-    lines.clear()
-    lines = f.readlines()
-try:
-    HO_idx = lines.index("[HitObjects]\n") + 1
-except ValueError:
-    exit("HitObject not found")
-#print(f"starts: {HO_idx} - ends: {len(lines)}")
-hitObjects:list[HitObject] = []
-hitObjects.clear()
-for idx in range(HO_idx, len(lines)):
-    obj = HitObject.from_str(lines[idx])
-    #if obj.type == 0:
-    hitObjects.append(obj)
+        return HODic
 
-for obj in hitObjects:
-    print(f"idx: {hitObjects.index(obj)} | Type: {obj.type_name.name}")
+        
+
+
+# lines = [""]
+# with open("Maps/839864 S3RL - Catchit (Radio Edit)/S3RL - Catchit (Radio Edit) (Rolniczy) [Ex].osu", 'r') as f:
+#     lines.clear()
+#     lines = f.readlines()
+# try:
+#     HO_idx = lines.index("[HitObjects]\n") + 1
+# except ValueError:
+#     exit("HitObject not found")
+# #print(f"starts: {HO_idx} - ends: {len(lines)}")
+# hitObjects:list[HitObject] = []
+# hitObjects.clear()
+# for idx in range(HO_idx, len(lines)):
+#     obj = HitObject.from_str(lines[idx])
+#     #if obj.type == 0:
+#     hitObjects.append(obj)
+
+# for obj in hitObjects:
+#     print(f"idx: {hitObjects.index(obj)} | Type: {obj.type_name.name} | Combo: {obj.color_flag}")
+
+# for child in pathlib.Path("Maps/839864 S3RL - Catchit (Radio Edit)").glob('*.osu'):
+#     print(child.name)
+#     dif = re.search('\\[[^\\]]*\\]', child.name)
+#     if dif:
+#         print(dif.group())
+
+bm = BeatMap("Maps/839864 S3RL - Catchit (Radio Edit)")
+for ho in bm.HitObjects:
+    print(f"{ho} object count: {len(bm.HitObjects[ho])}")
