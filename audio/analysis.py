@@ -49,7 +49,7 @@ class AudioAnalyser:
 
 Analyser = AudioAnalyser('Maps/785731 S3RL - Catchit (Radio Edit)/audio.mp3')
 
-Analyser.Show_onset_beats()
+#Analyser.Show_onset_beats()
 #Analyser.Show_fourier()
 
 #adding beats whenever onset > average
