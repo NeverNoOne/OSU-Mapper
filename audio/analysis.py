@@ -20,6 +20,21 @@ class AudioAnalyser:
         else:
             return librosa.beat.beat_track(y=self.y, sr=self.sr)
         
+    def Get_Beats_from_onset(self) -> tuple[np.ndarray, np.ndarray]:
+        onset_env = librosa.onset.onset_strength(y=self.y, sr=self.sr)
+        times = librosa.times_like(onset_env, sr=self.sr)
+        mean = np.mean(onset_env)
+        beat_array = np.copy(onset_env)
+        for index in range(onset_env.size):
+            if onset_env[index] < mean:
+                beat_array[index] = 0
+        return times, beat_array
+    
+    def Get_Pitch(self):
+        f0, voiced_flag, voiced_prob = librosa.pyin(y=self.y, fmin=float(librosa.note_to_hz('C2')), fmax=float(librosa.note_to_hz('C7')))
+        times = librosa.times_like(f0, sr=self.sr)
+        return times, f0
+
     def Show_onset_beats(self):
         tempo, beat_frames = self.Get_Beattrack(False)
         beat_times = librosa.frames_to_time(beat_frames, sr=self.sr)
@@ -49,31 +64,40 @@ class AudioAnalyser:
 
 Analyser = AudioAnalyser('Maps/785731 S3RL - Catchit (Radio Edit)/audio.mp3')
 
+# times, f0 = Analyser.Get_Pitch()
+# plt.figure(figsize=(10,6))
+# plt.plot(times, f0, label='F0', color='b')
+# plt.xlabel('Time (s)')
+# plt.ylabel('Frequency (Hz)')
+# plt.title('Pitch Tracking with pYIN')
+# plt.legend()
+# plt.show()
+
 #Analyser.Show_onset_beats()
 #Analyser.Show_fourier()
 
-#adding beats whenever onset > average
-hit_sound, hit_sr = librosa.load('Maps/785731 S3RL - Catchit (Radio Edit)/soft-hitclap.wav')
+# #adding beats whenever onset > average
+# hit_sound, hit_sr = librosa.load('Maps/785731 S3RL - Catchit (Radio Edit)/soft-hitclap.wav')
 
-hit_duration = len(hit_sound) / hit_sr
+# hit_duration = len(hit_sound) / hit_sr
 
-onset_env = librosa.onset.onset_strength(y=Analyser.y, sr=Analyser.sr)
-onset_avg = np.mean(onset_env)
+# onset_env = librosa.onset.onset_strength(y=Analyser.y, sr=Analyser.sr)
+# onset_avg = np.mean(onset_env)
 
-frames_above_avg = np.where(onset_env > onset_avg)[0]
-times_above_avg = librosa.frames_to_time(frames_above_avg, sr=Analyser.sr)
+# frames_above_avg = np.where(onset_env > onset_avg)[0]
+# times_above_avg = librosa.frames_to_time(frames_above_avg, sr=Analyser.sr)
 
-sample_indices = (times_above_avg * Analyser.sr).astype(int)
+# sample_indices = (times_above_avg * Analyser.sr).astype(int)
 
-output_audio = Analyser.y.copy()
+# output_audio = Analyser.y.copy()
 
-for idx in sample_indices:
-    end_idx = idx + len(hit_sound)
-    if end_idx <= len(output_audio):
-        output_audio[idx:end_idx] += hit_sound
-output_audio = np.clip(output_audio, -1.0, 1.0)
+# for idx in sample_indices:
+#     end_idx = idx + len(hit_sound)
+#     if end_idx <= len(output_audio):
+#         output_audio[idx:end_idx] += hit_sound
+# output_audio = np.clip(output_audio, -1.0, 1.0)
 
-sf.write('test.wav', output_audio, Analyser.sr)
+# sf.write('test.wav', output_audio, Analyser.sr)
 
 # _, beats = Analyser.Get_Beattrack(False)
 
