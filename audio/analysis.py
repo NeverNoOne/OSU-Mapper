@@ -10,7 +10,7 @@ class AudioAnalyser:
         self.y, self.sr = librosa.load(song_path)
         pass
 
-    def Get_Beattrack(self, onset_env:bool = False) -> tuple[Any, np.ndarray]:
+    def Get_Beattrack(self, onset_env:bool = True) -> tuple[Any, np.ndarray]:
         '''
         returns tempo in bpm, beat frames
         '''
@@ -19,6 +19,16 @@ class AudioAnalyser:
             return librosa.beat.beat_track(onset_envelope=onset, sr=self.sr)
         else:
             return librosa.beat.beat_track(y=self.y, sr=self.sr)
+        
+    def Get_Onsets(self) -> tuple[np.ndarray, np.ndarray]:
+        '''
+        Returns
+        ---
+        onset_strengths[ndarray] and onset_times[ndarray]
+        '''
+        onset_env = librosa.onset.onset_strength(y=self.y, sr=self.sr)
+        onset_times = librosa.frames_to_time(onset_env, sr=self.sr)
+        return onset_env, onset_times
         
     def Get_Beats_from_onset(self) -> tuple[np.ndarray, np.ndarray]:
         onset_env = librosa.onset.onset_strength(y=self.y, sr=self.sr)
@@ -62,7 +72,7 @@ class AudioAnalyser:
         plt.colorbar()
         plt.show()
 
-Analyser = AudioAnalyser('Maps/785731 S3RL - Catchit (Radio Edit)/audio.mp3')
+#Analyser = AudioAnalyser('Maps/785731 S3RL - Catchit (Radio Edit)/audio.mp3')
 
 # times, f0 = Analyser.Get_Pitch()
 # plt.figure(figsize=(10,6))
