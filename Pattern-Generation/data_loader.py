@@ -5,9 +5,52 @@ from enum import Enum
 import pathlib
 import re
 
-class BeatMapDataSet(Dataset):
+class General:
     def __init__(self) -> None:
-        super().__init__()
+        self.AudioFilename:str = ""
+        self.AudioLeadIn:int = 0
+        self.PreviewTime:int = -1
+        self.Countdown:int = 1
+        self.SampleSet:str = "Normal"
+        self.StackLeniency:float = 0.7
+        self.mode:Mode_Type = Mode_Type.osu
+        self.LetterboxInBreaks:bool = False
+        self.UseSkinSprites:bool = False
+        self.OverlayPosition:str = "NoChange"
+        self.SkinPreference:str = ""
+        self.EpilepsyWarning:bool = False
+        self.CountdownOffset:int = 0
+        self.SpecialStyle:bool = False
+        self.WidescreenStoryboard:bool = False
+        self.SamplesMatchPlaybackRate:bool = False
+
+class Metadata:
+    def __init__(self) -> None:
+        self.Title:str = ""
+        self.TitleUnicode:str = ""
+        self.Artist:str = ""
+        self.ArtistUnicode:str = ""
+        self.Creator:str = ""
+        self.Version:str = ""
+        self.Source:str = ""
+        self.Tags:list[str] = []
+        self.BeatmapID:int = 0
+        self.BeatmapSetID:int = 0
+
+class Difficulty:
+    def __init__(self) -> None:
+        self.HPDrainRate:float = 0
+        self.CircleSize:float = 0
+        self.OverallDifficulty:float = 0
+        self.ApproachRate:float = 0
+        self.SliderMultiplier:float = 0
+        self.SliderTickRate:float = 0
+        
+class Mode_Type(Enum):
+    osu = 0
+    taiko = 1
+    catch = 2
+    mania = 3
 
 class HitObject_Type(Enum):
     Hit_Circle = 1
@@ -41,7 +84,7 @@ class HitObject():
         itype = int(self.type)
         flag = color_flag_enum.unknown
         t = HitObject_Type.unknown
-        flags = [4,16,32,64]
+        flags = [64,32,16,4]
         for f in flags:
             if itype - f > 0:
                 flag = color_flag_enum(f)
@@ -86,14 +129,14 @@ class BeatMap:
     def __init__(self, BeatMap_Dir:str, Filter:list[HitObject_Type]=[]) ->None:
         self.BMDir = BeatMap_Dir
         '''relative BeatMap Directory'''
+        self.General:General
         self.Filter = Filter
         '''Filter option for specific HitObjects'''
         self.Audio_Path = pathlib.Path(BeatMap_Dir).joinpath("audio.mp3") if pathlib.Path(BeatMap_Dir).joinpath("audio.mp3").exists() and pathlib.Path(BeatMap_Dir).joinpath("audio.mp3").is_file() else pathlib.Path()
         '''Path of the Audio File | Beatmap Path if it wasn't found'''
         self.HitObjects:dict[str, list[HitObject]] = self.__getHitObjects__()
         '''HitObjects mapped to the difficulty'''
-        
-
+    
     def __getHitObjects__(self) -> dict[str, list[HitObject]]:
         HODic:dict[str, list[HitObject]] = {}
         HODic.clear()
