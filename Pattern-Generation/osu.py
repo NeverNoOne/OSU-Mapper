@@ -1,9 +1,11 @@
-import torch
-import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
+'''osu wrapper
+
+This library contains all classes needed to read an osu beatmapset
+
+'''
 from enum import Enum
 import pathlib
-import re
+import inspect
 
 class General:
     def __init__(self) -> None:
@@ -79,7 +81,7 @@ class HitObject():
         self.type_name = type_name
         self.color_flag = flag
         self.is_empty:bool = is_empty
-
+    #TODO color flags are not correct rn
     def __gettypename__(self) -> tuple[color_flag_enum, HitObject_Type]:
         itype = int(self.type)
         flag = color_flag_enum.unknown
@@ -88,7 +90,10 @@ class HitObject():
         for f in flags:
             if itype - f > 0:
                 flag = color_flag_enum(f)
-                t = HitObject_Type(itype - f)
+                if itype - f not in [item.value for item in HitObject_Type]:
+                    t = HitObject_Type(itype - f - 4)
+                else:
+                    t = HitObject_Type(itype - f)
                 break
         if flag == color_flag_enum.unknown and t == HitObject_Type.unknown:
             flag = color_flag_enum.none
@@ -139,10 +144,11 @@ class BeatMap:
         '''Filter option for specific HitObjects'''
         self.HitObjects:list[HitObject] = self.__getHitObjects__()
         '''HitObjects of the current BeatMap'''
+        #self.AudioFilePath:str = pathlib.Path(BeatMap_File).parent
     
     def __getGeneral__(self) -> General:
         Gn:General = General()
-        with open(self.BMFile, 'r') as f:
+        with open(self.BMFile, 'r', encoding='UTF-8') as f:
             lines = f.readlines()
             Start = lines.index('[General]\n')
             End = lines.index('\n',Start)
@@ -186,7 +192,7 @@ class BeatMap:
 
     def __getMetadata__(self) -> Metadata:
         md = Metadata()
-        with open(self.BMFile, 'r') as f:
+        with open(self.BMFile, 'r', encoding='UTF-8') as f:
             lines = f.readlines()
             Start = lines.index('[Metadata]\n')
             End = lines.index('\n',Start)
@@ -218,7 +224,7 @@ class BeatMap:
 
     def __getDifficulty__(self) -> Difficulty:
         dif = Difficulty()
-        with open(self.BMFile, 'r') as f:
+        with open(self.BMFile, 'r', encoding='UTF-8') as f:
             lines = f.readlines()
             Start = lines.index('[Difficulty]\n')
             End = lines.index('\n',Start)
@@ -242,7 +248,7 @@ class BeatMap:
 
     def __getHitObjects__(self) -> list[HitObject]:
         #retrieve hitobjects
-        with open(self.BMFile, 'r') as f:
+        with open(self.BMFile, 'r', encoding='UTF-8') as f:
             lines = f.readlines()
             try:
                 HO_idx = lines.index("[HitObjects]\n") + 1
@@ -255,40 +261,19 @@ class BeatMap:
         return HitObjects
 
     @classmethod
-    def getMaps_from_Dir(cls, Dir:str):
+    def getMaps_from_MapDir(cls, Dir:str):
+        '''
+        returns a list of Beatmaps from the given Directory
+        '''
         path = pathlib.Path(Dir)
         
         return [cls(str(child)) for child in path.glob('*.osu')]
-        
-
-
-# lines = [""]
-# with open("Maps/839864 S3RL - Catchit (Radio Edit)/S3RL - Catchit (Radio Edit) (Rolniczy) [Ex].osu", 'r') as f:
-#     lines.clear()
-#     lines = f.readlines()
-# try:
-#     HO_idx = lines.index("[HitObjects]\n") + 1
-# except ValueError:
-#     exit("HitObject not found")
-# #print(f"starts: {HO_idx} - ends: {len(lines)}")
-# hitObjects:list[HitObject] = []
-# hitObjects.clear()
-# for idx in range(HO_idx, len(lines)):
-#     obj = HitObject.from_str(lines[idx])
-#     #if obj.type == 0:
-#     hitObjects.append(obj)
-
-# for obj in hitObjects:
-#     print(f"idx: {hitObjects.index(obj)} | Type: {obj.type_name.name} | Combo: {obj.color_flag}")
-
-# for child in pathlib.Path("Maps/839864 S3RL - Catchit (Radio Edit)").glob('*.osu'):
-#     print(child.name)
-#     dif = re.search('\\[[^\\]]*\\]', child.name)
-#     if dif:
-#         print(dif.group())
-
-# bm = BeatMap("Maps/839864 S3RL - Catchit (Radio Edit)/S3RL - Catchit (Radio Edit) (Rolniczy) [Ex].osu", Filter=[HitObject_Type.Hit_Circle])
-# print(f"object count: {len(bm.HitObjects)}")
-
-for bm in BeatMap.getMaps_from_Dir("Maps/839864 S3RL - Catchit (Radio Edit)"):
-    print(f"{bm.Metadata.Version} | {len(bm.HitObjects)}")
+    
+    @classmethod
+    def getMaps_from_Dir(cls, Dir:str):
+        #return [cls.getMaps_from_MapDir(str(mapdir)) for mapdir in pathlib.Path(Dir).iterdir() if mapdir.is_dir]
+        r = []
+        for mapdir in pathlib.Path(Dir).iterdir():
+            if mapdir.is_dir():
+                r.extend(cls.getMaps_from_MapDir(str(mapdir)))
+        return r
