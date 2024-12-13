@@ -124,43 +124,135 @@ class BeatMap:
     Represents a BeatMap Object containing all Information provided by the files
     
     Parameters
-        BeatMap_Dir -> the relative path to the BeatMap Directory
+        BeatMapFile -> the relative path to the BeatMap File
     '''
-    def __init__(self, BeatMap_Dir:str, Filter:list[HitObject_Type]=[]) ->None:
-        self.BMDir = BeatMap_Dir
-        '''relative BeatMap Directory'''
-        self.General:General
+    def __init__(self, BeatMap_File:str, Filter:list[HitObject_Type]=[]) ->None:
+        self.BMFile = BeatMap_File
+        '''relative of the Beatmap File'''
+        self.General:General = self.__getGeneral__()
+        '''contains General settings of the Beatmap'''
+        self.Metadata:Metadata = self.__getMetadata__()
+        '''contains metadata about the Beatmap'''
+        self.Difficulty:Difficulty = self.__getDifficulty__()
+        '''contains the difficulty settings of the Beatmap'''
         self.Filter = Filter
         '''Filter option for specific HitObjects'''
-        self.Audio_Path = pathlib.Path(BeatMap_Dir).joinpath("audio.mp3") if pathlib.Path(BeatMap_Dir).joinpath("audio.mp3").exists() and pathlib.Path(BeatMap_Dir).joinpath("audio.mp3").is_file() else pathlib.Path()
-        '''Path of the Audio File | Beatmap Path if it wasn't found'''
-        self.HitObjects:dict[str, list[HitObject]] = self.__getHitObjects__()
-        '''HitObjects mapped to the difficulty'''
+        self.HitObjects:list[HitObject] = self.__getHitObjects__()
+        '''HitObjects of the current BeatMap'''
     
-    def __getHitObjects__(self) -> dict[str, list[HitObject]]:
-        HODic:dict[str, list[HitObject]] = {}
-        HODic.clear()
-        for child in pathlib.Path(self.BMDir).glob('*.osu'):
-            #extract difficulty name as key in dict
-            difficulty = re.search('\\[[^\\]]*\\]', child.name)
-            if difficulty:
-                difficulty = difficulty.group()
-            else:
-                difficulty = "not found"
-            
-            #retrieve hitobjects
-            with child.open('r') as f:
-                lines = f.readlines()
-                try:
-                    HO_idx = lines.index("[HitObjects]\n") + 1
-                except ValueError:
-                    HODic[difficulty] = [HitObject(is_empty=True)]
-                    continue
-                HODic[difficulty] = [HitObject.from_str(lines[idx]) for idx in range(HO_idx, len(lines))]
-                if len(self.Filter) > 0:
-                    HODic[difficulty] = [ho for ho in HODic[difficulty] if ho.type_name in self.Filter]
+    def __getGeneral__(self) -> General:
+        Gn:General = General()
+        with open(self.BMFile, 'r') as f:
+            lines = f.readlines()
+            Start = lines.index('[General]\n')
+            End = lines.index('\n',Start)
+            for idx in range(Start + 1,End):
+                option, value = lines[idx].split(':', 1)
+                value = value.removesuffix('\n')
+                match option:
+                    case "AudioFilename":
+                        Gn.AudioFilename = value
+                    case "AudioLeadIn":
+                        Gn.AudioLeadIn = int(value)
+                    case "PreviewTime":
+                        Gn.PreviewTime = int(value)
+                    case "Countdown":
+                        Gn.Countdown = int(value)
+                    case "SampleSet":
+                        Gn.SampleSet = value
+                    case "StackLeniency":
+                        Gn.StackLeniency = float(value)
+                    case "Mode":
+                        Gn.mode = Mode_Type(int(value))
+                    case "LetterboxInBreaks":
+                        Gn.LetterboxInBreaks = bool(value)
+                    case "UseSkinSprites":
+                        Gn.UseSkinSprites = bool(value)
+                    case "OverlayPosition":
+                        Gn.OverlayPosition = value
+                    case "SkinPreference":
+                        Gn.SkinPreference = value
+                    case "EpilepsyWarning":
+                        Gn.EpilepsyWarning = bool(value)
+                    case "CountdownOffset":
+                        Gn.CountdownOffset = int(value)
+                    case "SpecialStyle":
+                        Gn.SpecialStyle = bool(value)
+                    case "WidescreenStoryboard":
+                        Gn.WidescreenStoryboard = bool(value)
+                    case "SamplesMatchPlaybackRate":
+                        Gn.SamplesMatchPlaybackRate = bool(value)
+        return Gn
 
-        return HODic
+    def __getMetadata__(self) -> Metadata:
+        md = Metadata()
+        with open(self.BMFile, 'r') as f:
+            lines = f.readlines()
+            Start = lines.index('[Metadata]\n')
+            End = lines.index('\n',Start)
+            for idx in range(Start + 1,End):
+                option, value = lines[idx].split(':', 1)
+                value = value.removesuffix('\n')
+                match option:
+                    case "Title":
+                        md.Title = value
+                    case "TitleUnicode":
+                        md.TitleUnicode = value
+                    case "Artist":
+                        md.Artist = value
+                    case "ArtistUnicode":
+                        md.ArtistUnicode = value
+                    case "Creator":
+                        md.Creator = value
+                    case "Version":
+                        md.Version = value
+                    case "Source":
+                        md.Source = value
+                    case "Tags":
+                        md.Tags = value.split(' ')
+                    case "BeatmapID":
+                        md.BeatmapID = int(value)
+                    case "BeatmapSetID":
+                        md.BeatmapSetID = int(value)
+        return md
+
+    def __getDifficulty__(self) -> Difficulty:
+        dif = Difficulty()
+        with open(self.BMFile, 'r') as f:
+            lines = f.readlines()
+            Start = lines.index('[Difficulty]\n')
+            End = lines.index('\n',Start)
+            for idx in range(Start + 1,End):
+                option, value = lines[idx].split(':', 1)
+                value = value.removesuffix('\n')
+                match option:
+                    case "HPDrainRate":
+                        dif.HPDrainRate = float(value)
+                    case "CircleSize":
+                        dif.CircleSize = float(value)
+                    case "OverallDifficulty":
+                        dif.OverallDifficulty = float(value)
+                    case "ApproachRate":
+                        dif.ApproachRate = float(value)
+                    case "SliderMultiplier":
+                        dif.SliderMultiplier = float(value)
+                    case "SliderTickRate":
+                        dif.SliderTickRate = float(value)
+        return dif
+
+    def __getHitObjects__(self) -> list[HitObject]:
+        #retrieve hitobjects
+        with open(self.BMFile, 'r') as f:
+            lines = f.readlines()
+            try:
+                HO_idx = lines.index("[HitObjects]\n") + 1
+            except ValueError:
+                print(f"\033 [93m no hitobjects found in {self.BMFile} \033[0m")
+                return [HitObject(is_empty=True)]
+            HitObjects = [HitObject.from_str(lines[idx]) for idx in range(HO_idx, len(lines))]
+            if len(self.Filter) > 0:
+                HitObjects = [ho for ho in HitObjects if ho.type_name in self.Filter]
+        return HitObjects
 
         
 
@@ -190,7 +282,8 @@ class BeatMap:
 #     if dif:
 #         print(dif.group())
 
-bm = BeatMap("Maps/839864 S3RL - Catchit (Radio Edit)", Filter=[HitObject_Type.Hit_Circle])
-for ho in bm.HitObjects:
-    print(f"{ho} object count: {len(bm.HitObjects[ho])}")
-print(f"Audio File: {bm.Audio_Path.name}")
+bm = BeatMap("Maps/839864 S3RL - Catchit (Radio Edit)/S3RL - Catchit (Radio Edit) (Rolniczy) [Ex].osu", Filter=[HitObject_Type.Hit_Circle])
+print(f"object count: {len(bm.HitObjects)}")
+# import inspect
+# for prop in inspect.getmembers(bm.Difficulty):
+#     print(prop)
