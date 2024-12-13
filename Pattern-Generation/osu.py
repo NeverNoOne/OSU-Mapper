@@ -6,6 +6,7 @@ This library contains all classes needed to read an osu beatmapset
 from enum import Enum
 import pathlib
 import inspect
+from audio.analysis import AudioAnalyser
 
 class General:
     def __init__(self) -> None:
@@ -25,6 +26,8 @@ class General:
         self.SpecialStyle:bool = False
         self.WidescreenStoryboard:bool = False
         self.SamplesMatchPlaybackRate:bool = False
+        self.AudioFilePath:str = ""
+        self.AudioAnalyser:AudioAnalyser
 
 class Metadata:
     def __init__(self) -> None:
@@ -154,10 +157,12 @@ class BeatMap:
             End = lines.index('\n',Start)
             for idx in range(Start + 1,End):
                 option, value = lines[idx].split(':', 1)
-                value = value.removesuffix('\n')
+                value = value.removesuffix('\n').removeprefix(' ')
                 match option:
                     case "AudioFilename":
                         Gn.AudioFilename = value
+                        Gn.AudioFilePath = str(pathlib.Path(self.BMFile).parent.joinpath(value))
+                        Gn.AudioAnalyser = AudioAnalyser(Gn.AudioFilePath)
                     case "AudioLeadIn":
                         Gn.AudioLeadIn = int(value)
                     case "PreviewTime":
@@ -272,8 +277,16 @@ class BeatMap:
     @classmethod
     def getMaps_from_Dir(cls, Dir:str):
         #return [cls.getMaps_from_MapDir(str(mapdir)) for mapdir in pathlib.Path(Dir).iterdir() if mapdir.is_dir]
-        r = []
+        r:list[BeatMap] = []
+        r.clear()
         for mapdir in pathlib.Path(Dir).iterdir():
             if mapdir.is_dir():
                 r.extend(cls.getMaps_from_MapDir(str(mapdir)))
         return r
+import tracemalloc
+tracemalloc.start()
+p = BeatMap.getMaps_from_Dir("Maps")
+current, peak = tracemalloc.get_traced_memory()
+print(f"{current / 1024 / 1024:.2f}")
+print(f"{peak / 1024 / 1024:.2f}")
+tracemalloc.stop()
