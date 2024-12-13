@@ -254,6 +254,11 @@ class BeatMap:
                 HitObjects = [ho for ho in HitObjects if ho.type_name in self.Filter]
         return HitObjects
 
+    @classmethod
+    def getMaps_from_Dir(cls, Dir:str):
+        path = pathlib.Path(Dir)
+        
+        return [cls(str(child)) for child in path.glob('*.osu')]
         
 
 
@@ -282,8 +287,8 @@ class BeatMap:
 #     if dif:
 #         print(dif.group())
 
-bm = BeatMap("Maps/839864 S3RL - Catchit (Radio Edit)/S3RL - Catchit (Radio Edit) (Rolniczy) [Ex].osu", Filter=[HitObject_Type.Hit_Circle])
-print(f"object count: {len(bm.HitObjects)}")
-# import inspect
-# for prop in inspect.getmembers(bm.Difficulty):
-#     print(prop)
+# bm = BeatMap("Maps/839864 S3RL - Catchit (Radio Edit)/S3RL - Catchit (Radio Edit) (Rolniczy) [Ex].osu", Filter=[HitObject_Type.Hit_Circle])
+# print(f"object count: {len(bm.HitObjects)}")
+
+for bm in BeatMap.getMaps_from_Dir("Maps/839864 S3RL - Catchit (Radio Edit)"):
+    print(f"{bm.Metadata.Version} | {len(bm.HitObjects)}")
