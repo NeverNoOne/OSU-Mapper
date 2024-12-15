@@ -6,7 +6,7 @@ This library contains all classes needed to read an osu beatmapset
 from enum import Enum
 import pathlib
 import inspect
-from audio.analysis import AudioAnalyser
+from audio.analysis import AudioAnalyser as AA
 
 class General:
     def __init__(self) -> None:
@@ -27,7 +27,18 @@ class General:
         self.WidescreenStoryboard:bool = False
         self.SamplesMatchPlaybackRate:bool = False
         self.AudioFilePath:str = ""
-        self.AudioAnalyser:AudioAnalyser
+        self._AudioAnalyser:AA|None = None
+    
+    @property
+    def AudioAnalyser(self):
+        if not self._AudioAnalyser:
+            return AA(self.AudioFilePath)
+        else: return self._AudioAnalyser
+    @AudioAnalyser.setter
+    def AudioAnalyser(self, value:AA):
+        self._AudioAnalyser = value
+
+
 
 class Metadata:
     def __init__(self) -> None:
@@ -134,11 +145,15 @@ class HitObject():
 class BeatMap:
     '''
     Represents a BeatMap Object containing all Information provided by the files
+
+    may be empty when file was not found
     
     Parameters
         BeatMapFile -> the relative path to the BeatMap File
+        Filter -> optional: only get specific HitObjects; default=[]
+        autoload_analyser -> optional: inistialize the Analyser on __init__; default=False
     '''
-    def __init__(self, BeatMap_File:str, Filter:list[HitObject_Type]=[]) ->None:
+    def __init__(self, BeatMap_File:str, Filter:list[HitObject_Type]=[], autoload_analyser=False) ->None:
         self.BMFile:pathlib.Path = pathlib.Path(BeatMap_File)
         '''relative of the Beatmap File'''
         self.General:General
@@ -153,14 +168,15 @@ class BeatMap:
         '''HitObjects of the current BeatMap'''
         #self.AudioFilePath:str = pathlib.Path(BeatMap_File).parent
         if self.BMFile.exists():
-            self.General = self.__getGeneral__()
+            self.General = self.__getGeneral__(autoload_analyser)
             self.Metadata = self.__getMetadata__()
             self.Difficulty = self.__getDifficulty__()
             self.HitObjects = self.__getHitObjects__()
         else:
-            print(f'file not found: {self.BMFile.name}')
+            print(f"Path length of {str(self.BMFile)} may be too long!\nConsider changing it to something shorter or enabeling 'LongPathsEnabled' in the Regestry")
+            raise FileNotFoundError
     
-    def __getGeneral__(self) -> General:
+    def __getGeneral__(self, autoload_analyser:bool) -> General:
         Gn:General = General()
         with self.BMFile.open('r', encoding='UTF-8') as f:
             lines = f.readlines()
@@ -173,7 +189,8 @@ class BeatMap:
                     case "AudioFilename":
                         Gn.AudioFilename = value
                         Gn.AudioFilePath = str(pathlib.Path(self.BMFile).parent.joinpath(value))
-                        Gn.AudioAnalyser = AudioAnalyser(Gn.AudioFilePath)
+                        if autoload_analyser:
+                            Gn.AudioAnalyser = AA(Gn.AudioFilePath)
                     case "AudioLeadIn":
                         Gn.AudioLeadIn = int(value)
                     case "PreviewTime":
@@ -307,4 +324,5 @@ p = BeatMap.getMaps_from_Dir("Maps")
 current, peak = tracemalloc.get_traced_memory()
 print(f"{current / 1024 / 1024:.2f}mb")
 print(f"{peak / 1024 / 1024:.2f}mb")
+print(p[0].General.AudioAnalyser.song_path)
 tracemalloc.stop()
