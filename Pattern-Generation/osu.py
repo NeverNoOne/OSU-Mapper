@@ -94,7 +94,11 @@ class HitObject():
             if itype - f > 0:
                 flag = color_flag_enum(f)
                 if itype - f not in [item.value for item in HitObject_Type]:
-                    t = HitObject_Type(itype - f - 4)
+                    if itype - f - 4 not in [item.value for item in HitObject_Type]:
+                        #TODO maybe should default to circle?
+                        t = HitObject_Type.unknown
+                    else:
+                        t = HitObject_Type(itype - f - 4)
                 else:
                     t = HitObject_Type(itype - f)
                 break
@@ -135,23 +139,30 @@ class BeatMap:
         BeatMapFile -> the relative path to the BeatMap File
     '''
     def __init__(self, BeatMap_File:str, Filter:list[HitObject_Type]=[]) ->None:
-        self.BMFile = BeatMap_File
+        self.BMFile:pathlib.Path = pathlib.Path(BeatMap_File)
         '''relative of the Beatmap File'''
-        self.General:General = self.__getGeneral__()
+        self.General:General
         '''contains General settings of the Beatmap'''
-        self.Metadata:Metadata = self.__getMetadata__()
+        self.Metadata:Metadata
         '''contains metadata about the Beatmap'''
-        self.Difficulty:Difficulty = self.__getDifficulty__()
+        self.Difficulty:Difficulty
         '''contains the difficulty settings of the Beatmap'''
         self.Filter = Filter
         '''Filter option for specific HitObjects'''
-        self.HitObjects:list[HitObject] = self.__getHitObjects__()
+        self.HitObjects:list[HitObject]
         '''HitObjects of the current BeatMap'''
         #self.AudioFilePath:str = pathlib.Path(BeatMap_File).parent
+        if self.BMFile.exists():
+            self.General = self.__getGeneral__()
+            self.Metadata = self.__getMetadata__()
+            self.Difficulty = self.__getDifficulty__()
+            self.HitObjects = self.__getHitObjects__()
+        else:
+            print(f'file not found: {self.BMFile.name}')
     
     def __getGeneral__(self) -> General:
         Gn:General = General()
-        with open(self.BMFile, 'r', encoding='UTF-8') as f:
+        with self.BMFile.open('r', encoding='UTF-8') as f:
             lines = f.readlines()
             Start = lines.index('[General]\n')
             End = lines.index('\n',Start)
@@ -197,7 +208,7 @@ class BeatMap:
 
     def __getMetadata__(self) -> Metadata:
         md = Metadata()
-        with open(self.BMFile, 'r', encoding='UTF-8') as f:
+        with self.BMFile.open('r', encoding='UTF-8') as f:
             lines = f.readlines()
             Start = lines.index('[Metadata]\n')
             End = lines.index('\n',Start)
@@ -229,7 +240,7 @@ class BeatMap:
 
     def __getDifficulty__(self) -> Difficulty:
         dif = Difficulty()
-        with open(self.BMFile, 'r', encoding='UTF-8') as f:
+        with self.BMFile.open('r', encoding='UTF-8') as f:
             lines = f.readlines()
             Start = lines.index('[Difficulty]\n')
             End = lines.index('\n',Start)
@@ -253,7 +264,7 @@ class BeatMap:
 
     def __getHitObjects__(self) -> list[HitObject]:
         #retrieve hitobjects
-        with open(self.BMFile, 'r', encoding='UTF-8') as f:
+        with self.BMFile.open('r', encoding='UTF-8') as f:
             lines = f.readlines()
             try:
                 HO_idx = lines.index("[HitObjects]\n") + 1
@@ -277,16 +288,23 @@ class BeatMap:
     @classmethod
     def getMaps_from_Dir(cls, Dir:str):
         #return [cls.getMaps_from_MapDir(str(mapdir)) for mapdir in pathlib.Path(Dir).iterdir() if mapdir.is_dir]
+        print('loading Beatmaps')
         r:list[BeatMap] = []
         r.clear()
-        for mapdir in pathlib.Path(Dir).iterdir():
+        dirs = [x for x in pathlib.Path(Dir).iterdir()]
+        count = 0
+        for mapdir in dirs:
             if mapdir.is_dir():
                 r.extend(cls.getMaps_from_MapDir(str(mapdir)))
+                print(f'{100 * count/len(dirs):0.2f}%')
+                count += 1
+        print(f'{100 * count/len(dirs):0.2f}%')
+        print(f'loaded {len(dirs)} Beatmapsets containing {len(r)} Beatmaps')
         return r
 import tracemalloc
 tracemalloc.start()
 p = BeatMap.getMaps_from_Dir("Maps")
 current, peak = tracemalloc.get_traced_memory()
-print(f"{current / 1024 / 1024:.2f}")
-print(f"{peak / 1024 / 1024:.2f}")
+print(f"{current / 1024 / 1024:.2f}mb")
+print(f"{peak / 1024 / 1024:.2f}mb")
 tracemalloc.stop()
