@@ -294,16 +294,16 @@ class BeatMap:
         return HitObjects
 
     @classmethod
-    def getMaps_from_MapDir(cls, Dir:str):
+    def getMaps_from_MapDir(cls, Dir:str, HitObjectFilter:list[HitObject_Type]=[], autoload_analyser:bool=False):
         '''
         returns a list of Beatmaps from the given Directory
         '''
         path = pathlib.Path(Dir)
         
-        return [cls(str(child)) for child in path.glob('*.osu')]
+        return [cls(str(child), Filter=HitObjectFilter, autoload_analyser=autoload_analyser) for child in path.glob('*.osu')]
     
     @classmethod
-    def getMaps_from_Dir(cls, Dir:str):
+    def getMaps_from_Dir(cls, Dir:str, HitObjectFilter:list[HitObject_Type]=[], autoload_analyser:bool=False):
         #return [cls.getMaps_from_MapDir(str(mapdir)) for mapdir in pathlib.Path(Dir).iterdir() if mapdir.is_dir]
         print('loading Beatmaps')
         r:list[BeatMap] = []
@@ -312,17 +312,20 @@ class BeatMap:
         count = 0
         for mapdir in dirs:
             if mapdir.is_dir():
-                r.extend(cls.getMaps_from_MapDir(str(mapdir)))
+                r.extend(cls.getMaps_from_MapDir(str(mapdir), HitObjectFilter=HitObjectFilter, autoload_analyser=autoload_analyser))
                 print(f'{100 * count/len(dirs):0.2f}%')
                 count += 1
+        tmp:list[HitObject] = []
+        tmp.clear()
+        for x in r:
+            tmp.extend(x.HitObjects)
         print(f'{100 * count/len(dirs):0.2f}%')
-        print(f'loaded {len(dirs)} Beatmapsets containing {len(r)} Beatmaps')
+        print(f'loaded {len(dirs)} Beatmapsets containing {len(r)} Beatmaps which contains {len(tmp)} HitObjects')
         return r
-import tracemalloc
-tracemalloc.start()
-p = BeatMap.getMaps_from_Dir("Maps")
-current, peak = tracemalloc.get_traced_memory()
-print(f"{current / 1024 / 1024:.2f}mb")
-print(f"{peak / 1024 / 1024:.2f}mb")
-print(p[0].General.AudioAnalyser.song_path)
-tracemalloc.stop()
+# import tracemalloc
+# tracemalloc.start()
+# p = BeatMap.getMaps_from_Dir("Maps", autoload_analyser=False)
+# current, peak = tracemalloc.get_traced_memory()
+# print(f"{current / 1024 / 1024:.2f}mb")
+# print(f"{peak / 1024 / 1024:.2f}mb")
+# tracemalloc.stop()
