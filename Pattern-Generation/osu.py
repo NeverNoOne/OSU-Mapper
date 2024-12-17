@@ -32,11 +32,14 @@ class General:
     @property
     def AudioAnalyser(self):
         if not self._AudioAnalyser:
-            return AA(self.AudioFilePath)
-        else: return self._AudioAnalyser
+            self._AudioAnalyser = AA(self.AudioFilePath)
+        return self._AudioAnalyser
     @AudioAnalyser.setter
     def AudioAnalyser(self, value:AA):
         self._AudioAnalyser = value
+
+    def GetAudioAnalyser(self) -> AA:
+        return AA(self.AudioFilePath)
 
 
 
@@ -322,10 +325,10 @@ class BeatMap:
         print(f'{100 * count/len(dirs):0.2f}%')
         print(f'loaded {len(dirs)} Beatmapsets containing {len(r)} Beatmaps which contains {len(tmp)} HitObjects')
         return r
-# import tracemalloc
-# tracemalloc.start()
-# p = BeatMap.getMaps_from_Dir("Maps", autoload_analyser=False)
-# current, peak = tracemalloc.get_traced_memory()
-# print(f"{current / 1024 / 1024:.2f}mb")
-# print(f"{peak / 1024 / 1024:.2f}mb")
-# tracemalloc.stop()
+import tracemalloc
+tracemalloc.start()
+p = BeatMap.getMaps_from_Dir("Maps", autoload_analyser=False)
+current, peak = tracemalloc.get_traced_memory()
+print(f"{current / 1024 / 1024:.2f}mb")
+print(f"{peak / 1024 / 1024:.2f}mb")
+tracemalloc.stop()
