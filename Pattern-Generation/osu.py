@@ -159,25 +159,19 @@ class BeatMap:
     def __init__(self, BeatMap_File:str, Filter:list[HitObject_Type]=[], autoload_analyser=False) ->None:
         self.BMFile:pathlib.Path = pathlib.Path(BeatMap_File)
         '''relative of the Beatmap File'''
-        self.General:General
+        if not self.BMFile.exists():
+            print(f"Path length of {str(self.BMFile)} may be too long!\nConsider changing it to something shorter or enabeling 'LongPathsEnabled' in the Regestry")
+            raise FileNotFoundError
+        self.General:General = self.__getGeneral__(autoload_analyser)
         '''contains General settings of the Beatmap'''
-        self.Metadata:Metadata
+        self.Metadata:Metadata = self.__getMetadata__()
         '''contains metadata about the Beatmap'''
-        self.Difficulty:Difficulty
+        self.Difficulty:Difficulty = self.__getDifficulty__()
         '''contains the difficulty settings of the Beatmap'''
         self.Filter = Filter
         '''Filter option for specific HitObjects'''
-        self.HitObjects:list[HitObject]
+        self.HitObjects:list[HitObject] = self.__getHitObjects__()
         '''HitObjects of the current BeatMap'''
-        #self.AudioFilePath:str = pathlib.Path(BeatMap_File).parent
-        if self.BMFile.exists():
-            self.General = self.__getGeneral__(autoload_analyser)
-            self.Metadata = self.__getMetadata__()
-            self.Difficulty = self.__getDifficulty__()
-            self.HitObjects = self.__getHitObjects__()
-        else:
-            print(f"Path length of {str(self.BMFile)} may be too long!\nConsider changing it to something shorter or enabeling 'LongPathsEnabled' in the Regestry")
-            raise FileNotFoundError
     
     def __getGeneral__(self, autoload_analyser:bool) -> General:
         Gn:General = General()
@@ -325,10 +319,10 @@ class BeatMap:
         print(f'{100 * count/len(dirs):0.2f}%')
         print(f'loaded {len(dirs)} Beatmapsets containing {len(r)} Beatmaps which contains {len(tmp)} HitObjects')
         return r
-import tracemalloc
-tracemalloc.start()
-p = BeatMap.getMaps_from_Dir("Maps", autoload_analyser=False)
-current, peak = tracemalloc.get_traced_memory()
-print(f"{current / 1024 / 1024:.2f}mb")
-print(f"{peak / 1024 / 1024:.2f}mb")
-tracemalloc.stop()
+# import tracemalloc
+# tracemalloc.start()
+# p = BeatMap.getMaps_from_Dir("Maps", autoload_analyser=False)
+# current, peak = tracemalloc.get_traced_memory()
+# print(f"{current / 1024 / 1024:.2f}mb")
+# print(f"{peak / 1024 / 1024:.2f}mb")
+# tracemalloc.stop()
