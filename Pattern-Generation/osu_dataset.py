@@ -30,9 +30,25 @@ class OsuBeatmapDataset(Dataset):
         returns a tuple of [bpm, another tuple[onset_strenghts, onset_times]]
         '''
         values:list[tuple[Any, tuple[ndarray,ndarray]]] = []
+        values.clear()
+        print("generating audio labels...")
+        count = 0
         for map in maps:
             AA = map.General.GetAudioAnalyser()
             bpm, _ = AA.Get_Beattrack()
             onsets = AA.Get_Onsets()
             values.append((bpm, onsets))
+            AA = None
+            count += 1
+            print(f'{100 * count/len(maps):0.2f}%')
+        print("audio labels generated")
         return values
+    
+# import tracemalloc
+# tracemalloc.start()
+# ds = OsuBeatmapDataset('Maps')
+# current, peak = tracemalloc.get_traced_memory()
+# print(f"{current / 1024 / 1024:.2f}mb")
+# print(f"{peak / 1024 / 1024:.2f}mb")
+# print(f'generated {len(ds)} audio labels')
+# tracemalloc.stop()
