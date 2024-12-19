@@ -319,10 +319,13 @@ class BeatMap:
         print(f'{100 * count/len(dirs):0.2f}%')
         print(f'loaded {len(dirs)} Beatmapsets containing {len(r)} Beatmaps which contains {len(tmp)} HitObjects')
         return r
-# import tracemalloc
-# tracemalloc.start()
-# p = BeatMap.getMaps_from_Dir("Maps", autoload_analyser=False)
-# current, peak = tracemalloc.get_traced_memory()
-# print(f"{current / 1024 / 1024:.2f}mb")
-# print(f"{peak / 1024 / 1024:.2f}mb")
-# tracemalloc.stop()
+    
+
+if __name__ == '__main__':
+    import tracemalloc
+    tracemalloc.start()
+    p = BeatMap.getMaps_from_Dir("Maps", autoload_analyser=False)
+    current, peak = tracemalloc.get_traced_memory()
+    print(f"{current / 1024 / 1024:.2f}mb")
+    print(f"{peak / 1024 / 1024:.2f}mb")
+    tracemalloc.stop()

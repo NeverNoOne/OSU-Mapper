@@ -5,6 +5,7 @@ from numpy import ndarray
 from typing import Any
 import osu
 
+#TODO self.BeatMaps should be the output fromat --> what output format do I want/need from the Transformer
 #TODO testing if it works
 class OsuBeatmapDataset(Dataset):
     def __init__(self, map_dir, transform=None, target_transform=None) -> None:
@@ -44,11 +45,12 @@ class OsuBeatmapDataset(Dataset):
         print("audio labels generated")
         return values
     
-# import tracemalloc
-# tracemalloc.start()
-# ds = OsuBeatmapDataset('Maps')
-# current, peak = tracemalloc.get_traced_memory()
-# print(f"{current / 1024 / 1024:.2f}mb")
-# print(f"{peak / 1024 / 1024:.2f}mb")
-# print(f'generated {len(ds)} audio labels')
-# tracemalloc.stop()
+if __name__ == '__main__':
+    import tracemalloc
+    tracemalloc.start()
+    ds = OsuBeatmapDataset('Maps')
+    current, peak = tracemalloc.get_traced_memory()
+    print(f"{current / 1024 / 1024:.2f}mb")
+    print(f"{peak / 1024 / 1024:.2f}mb")
+    print(f'generated {len(ds)} audio labels')
+    tracemalloc.stop()
