@@ -9,7 +9,7 @@ import osu
 #idea: ndarray[onset_times,  onset_strenghts] and ndarray[noteplacement]
 #TODO testing if it works
 class OsuBeatmapDataset(Dataset):
-    def __init__(self, map_dir, transform=None, target_transform=None) -> None:
+    def __init__(self, map_dir, transform=None, target_transform=None, count_mapsets=None) -> None:
         """
         Parameters:
         ---
@@ -20,7 +20,7 @@ class OsuBeatmapDataset(Dataset):
         target_transform : callable, optional
             Optional transform to apply to target labels.
         """
-        maps = osu.BeatMap.getMaps_from_Dir(map_dir)
+        maps = osu.BeatMap.getMaps_from_Dir(map_dir, count_mapsets=count_mapsets)
         self.audio_labels = self.__generate_labels__(maps)
         self.BeatMaps = maps
         self.transform = transform
@@ -32,16 +32,13 @@ class OsuBeatmapDataset(Dataset):
     def __getitem__(self, idx:int):
         _, onsets = self.audio_labels[idx]
         note_placement = [int(x.time) for x in self.BeatMaps[idx].HitObjects]
-        #Normalize onset strengths and note placements
-        onsets = onsets / np.max(onsets)
-        note_placement = np.array(note_placement) / np.max(note_placement)
 
         if self.transform:
             onsets = self.transform(onsets)
         if self.target_transform:
             note_placement = self.target_transform(note_placement)
 
-        return onsets, note_placement
+        return torch.tensor(onsets), torch.tensor(note_placement)
 
     def __generate_labels__(self, maps:list[osu.BeatMap]):
         '''

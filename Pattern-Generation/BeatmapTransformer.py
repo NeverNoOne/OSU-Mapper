@@ -7,14 +7,14 @@ from osu_dataset import OsuBeatmapDataset
 def collate_fn(batch):
     inputs, targets = zip(*batch)
     
-    # Convert inputs and targets to tensors, adding a feature dimension (e.g., [sequence_length, 1])
-    inputs = [torch.tensor(x).float().unsqueeze(1) for x in inputs]
-    targets = [torch.tensor(y).float() for y in targets]
+    # Convert inputs to tensors and transpose to [sequence_length, feature_dim]
+    inputs = [torch.tensor(x).float().T for x in inputs]  # Transpose: [seq_len, 2]
+    targets = [torch.tensor(y).float() for y in targets]  # Targets: [seq_len]
     
     # Pad sequences to match the longest sequence in the batch
-    inputs_padded = pad_sequence(inputs, batch_first=True)  # Shape: [batch_size, max_seq_len, feature_dim]
-    targets_padded = pad_sequence(targets, batch_first=True)  # Shape: [batch_size, max_seq_len]
-
+    inputs_padded = pad_sequence(inputs, batch_first=True)  # [batch_size, max_seq_len, 2]
+    targets_padded = pad_sequence(targets, batch_first=True)  # [batch_size, max_seq_len]
+    
     return inputs_padded, targets_padded
 
 class BeatmapTransformer(nn.Module):
@@ -41,8 +41,8 @@ def create_attention_mask(padded_inputs):
 
 if __name__ == '__main__':
     epochs = 2
-    model = BeatmapTransformer(input_dim=1, hidden_dim=128, num_layers=4, num_heads=8, output_dim=1)
-    data_loader = DataLoader(OsuBeatmapDataset('Maps'), batch_size=32, collate_fn=collate_fn)
+    model = BeatmapTransformer(input_dim=2, hidden_dim=128, num_layers=4, num_heads=8, output_dim=1)
+    data_loader = DataLoader(OsuBeatmapDataset('Maps', count_mapsets=2), batch_size=32, collate_fn=collate_fn)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     criterion = nn.MSELoss()
 
