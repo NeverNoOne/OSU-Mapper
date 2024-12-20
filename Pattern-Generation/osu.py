@@ -300,12 +300,14 @@ class BeatMap:
         return [cls(str(child), Filter=HitObjectFilter, autoload_analyser=autoload_analyser) for child in path.glob('*.osu')]
     
     @classmethod
-    def getMaps_from_Dir(cls, Dir:str, HitObjectFilter:list[HitObject_Type]=[], autoload_analyser:bool=False):
+    def getMaps_from_Dir(cls, Dir:str, HitObjectFilter:list[HitObject_Type]=[], autoload_analyser:bool=False, count_mapsets=None):
         #return [cls.getMaps_from_MapDir(str(mapdir)) for mapdir in pathlib.Path(Dir).iterdir() if mapdir.is_dir]
         print('loading Beatmaps')
         r:list[BeatMap] = []
         r.clear()
         dirs = [x for x in pathlib.Path(Dir).iterdir()]
+        if count_mapsets:
+            dirs = [dirs[idx] for idx in range(count_mapsets)]
         count = 0
         for mapdir in dirs:
             if mapdir.is_dir():
