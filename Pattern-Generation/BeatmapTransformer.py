@@ -4,8 +4,9 @@ from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 from osu_dataset import OsuBeatmapDataset
 from torch.cuda.amp import autocast
+from torch.amp.grad_scaler import GradScaler
 import time
-
+#TODO input additionally the difficulty and bpm 
 def collate_fn(batch):
     inputs, targets = zip(*batch)
     
@@ -55,44 +56,37 @@ def compute_loss(predictions, targets, criterion):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
-    epochs = 2
-    batch_size = 4
+    epochs = 10
+    batch_size = 16
     model = BeatmapTransformer(input_dim=2, hidden_dim=128, num_layers=4, num_heads=8, output_dim=1).to(device)
     data_loader = DataLoader(OsuBeatmapDataset('Maps'), batch_size=batch_size, collate_fn=collate_fn)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     criterion = nn.MSELoss()
     bcount = 0
     total_loss = 0
-    accumulation_steps = 4
     for epoch in range(epochs):
         model.train()
         total_loss = 0
         begin = time.time()
+        scaler = GradScaler()
         for i, batch in enumerate(data_loader):
             bcount += 1
             loss = 0
-            with torch.autocast(device.type):
-                x, y = batch  # x: Onset strengths, y: Note placements
-                x = x.to(device)
-                y = y.to(device)
-                mask = create_attention_mask(x)
+            x, y = batch  # x: Onset strengths, y: Note placements
+            x = x.to(device)
+            y = y.to(device)
+            mask = create_attention_mask(x)
+            with torch.autocast(device.type):                
                 predictions = model(x, mask)
-                #loss = criterion(predictions, y)
                 loss = compute_loss(predictions, y, criterion)
-            loss.backward()
-            if (i + 1) % accumulation_steps == 0:
-                optimizer.step()
-                optimizer.zero_grad()
-                print("reset optimizer")
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+            optimizer.zero_grad()
             total_loss += loss.item()
-            if bcount % 10 == 0: print(f"finished batch: {bcount} with Loss: {loss.item():.4f} took: {time.time()-begin}"); begin = time.time()
-            torch.cuda.empty_cache()
-        #if epoch % 5 == 0:
-        print(f'Epoch [{epoch+1}/{epochs}], Average Loss: {total_loss / batch_size:.4f}')
+            if bcount % 10 == 0: print(f"finished batch: {bcount} with Loss: {loss.item():.4f} took: {time.time()-begin:0.2f} seconds"); begin = time.time()
+        print(f'Epoch [{epoch+1}/{epochs}], Average Loss: {total_loss / len(data_loader):.4f}')
 
-# Exception has occurred: RuntimeError
-# The size of tensor a (3945) must match the size of tensor b (30) at non-singleton dimension 1
-#   File "C:\repos\OSU\OSU-Mapper\Pattern-Generation\BeatmapTransformer.py", line 60, in <module>
-#     loss = criterion(predictions, y)
-#            ^^^^^^^^^^^^^^^^^^^^^^^^^
-# RuntimeError: The size of tensor a (3945) must match the size of tensor b (30) at non-singleton dimension 1
+    print('saving model...')
+    torch.save(model.state_dict(), 'model_weights.pth')
+    print('model saved!\nScript is done running')
