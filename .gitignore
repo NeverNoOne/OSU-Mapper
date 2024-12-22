@@ -1,3 +1,4 @@
 Maps/
 audio/__pycache__
 Pattern-Generation/__pycache__
+*.pth
